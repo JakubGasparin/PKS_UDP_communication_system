@@ -23,14 +23,14 @@ FIN = 9  # Finish communication
 
 ####### FLAGS ######
 
-msgFromClient = "Hello UDP Server"
+msgFromClient = "Connected to server"
 
 bytesToSend = str.encode(msgFromClient)
 HOST = "192.168.56.1"
 PORT = 5555
 
 
-FRAGMENT_SIZE = 200
+FRAGMENT_SIZE = 1024
 FRAGMENT_HEAD_SIZE = 13
 PACKET_ORDER = 1
 OPERATION = 0
@@ -175,7 +175,7 @@ def encode_KAR():
 def send_keep_alive_request(c, addr):
     while True:
         KAR_packet = encode_KAR()
-        time.sleep(10)
+        time.sleep(5)
         # print("Sending Keep alive request")
         c.sendto(KAR_packet, addr)
 
@@ -369,7 +369,7 @@ def encode_NCK():
 
 def get_keep_alive_timer(s):
     while True:
-        time.sleep(20)
+        time.sleep(5)
         if HAS_KAR_ARRIVED:
             print(f"Received Keep alive request")
         else:
@@ -400,12 +400,13 @@ def bytes_array_to_file(data):
 
 ####################################### CLIENT CODE ############################################
 def client():
-    global INITIAL_ACK, HOST, PORT, OPERATION, PACKET_ORDER, TOTAL_SENT, TOTAL_RECEIVED
+    global INITIAL_ACK, HOST, PORT, OPERATION, PACKET_ORDER, TOTAL_SENT, TOTAL_RECEIVED, FRAGMENT_SIZE
     INITIAL_ACK = False
     HOST = "192.168.56.1"
     PORT = 5555
     HOST = input(f"Current host IP is {HOST}, please select your server IP: ")
     PORT = int(input(f"Current port is {PORT}, please select your port: "))
+    FRAGMENT_SIZE = int(input(f"Default fragment size is 1024, please select your fragment size: "))
     serverAddressPort = (HOST, PORT)
     c = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 

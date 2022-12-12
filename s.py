@@ -24,13 +24,13 @@ FIN = 9  # Finish communication
 ####### FLAGS ######
 
 
-msgFromServer = "Hello UDP Client"
+msgFromServer = "Client connected"
 bytesToSend = str.encode(msgFromServer)
 
 HOST = "192.168.56.1"
 PORT = 5555
 
-FRAGMENT_SIZE = 200
+FRAGMENT_SIZE = 1024
 FRAGMENT_HEAD_SIZE = 13
 PACKET_ORDER = 1
 OPERATION = 0
@@ -40,6 +40,7 @@ PACKET_BUFFER = []
 INITIAL_ACK = False
 HAS_KAR_ARRIVED = True
 SIMULATE_ERROR = False
+KAR_TIMER = False
 
 TOTAL_SENT = 0
 TOTAL_RECEIVED = 0
@@ -353,10 +354,13 @@ def encode_NCK():
 
 
 def get_keep_alive_timer(s):
+    global KAR_TIMER
     while True:
         time.sleep(20)
-        if HAS_KAR_ARRIVED:
+        print("got here")
+        if KAR_TIMER:
             print(f"Received Keep alive request")
+            KAR_TIMER = False
         else:
             sys.exit()
 
@@ -394,7 +398,7 @@ def client():
     serverAddressPort = (HOST, PORT)
     c = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-    keep_alive_thread = threading.Thread(target=send_keep_alive_request, args=(c, serverAddressPort))
+    keep_alive_thread = threading.Thread(target=send_keep_alive_request, args=(c,))
     keep_alive_thread.start()
     while True:
         if not INITIAL_ACK:
@@ -488,18 +492,19 @@ def client():
 
 
 def server():
-    global INITIAL_ACK, HOST, PORT, TOTAL_SENT, TOTAL_RECEIVED
+    global INITIAL_ACK, HOST, PORT, TOTAL_SENT, TOTAL_RECEIVED, KAR_TIMER, FRAGMENT_SIZE
     INITIAL_ACK = False
     HOST = "192.168.56.1"
     PORT = 5555
     HOST = input(f"Current host IP is {HOST}, please select your server IP: ")
     PORT = int(input(f"Current port is {PORT}, please select your port: "))
+    FRAGMENT_SIZE = int(input(f"Default fragment size is 1024, please select your fragment size: "))
     s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     s.bind((HOST, PORT))
     print("UDP server up and listening")
 
-    # keep_alive_thread_server = threading.Thread(target=get_keep_alive_timer, args=(s,))
-    # keep_alive_thread_server.start()
+    keep_alive_thread_server = threading.Thread(target=get_keep_alive_timer, args=(s,))
+    keep_alive_thread_server.start()
     full_msg = []
     while True:
         if not INITIAL_ACK:
@@ -519,12 +524,14 @@ def server():
         packet = decode_data(msg)
         if packet[1] != "_KAR":
             TOTAL_RECEIVED = TOTAL_RECEIVED + 13
-        print(f"Length of fragment: {len(msg)}\n"
-              f"Order: {packet[0]}\n"
-              f"Operation: {packet[1]}\n"
-              f"Total_packets: {packet[2]}\n"
-              f"Message: {packet[3]}\n"
-              f"Checksum: {packet[4]}\n")
+        if packet[1] == "_KAR":
+            KAR_TIMER = True
+            print(f"Length of fragment: {len(msg)}\n"
+                  f"Order: {packet[0]}\n"
+                  f"Operation: {packet[1]}\n"
+                  f"Total_packets: {packet[2]}\n"
+                  f"Message: {packet[3]}\n"
+                  f"Checksum: {packet[4]}\n")
         if packet[1] == "_SWR":
             print(f"Poslana rezai: {TOTAL_SENT}\n"
                   f"Prijdena rezia: {TOTAL_RECEIVED}")
@@ -561,6 +568,9 @@ def server():
             full_msg.clear()
         print(f"Poslana rezai: {TOTAL_SENT}\n"
               f"Prijdena rezia: {TOTAL_RECEIVED}")
+
+        if not keep_alive_thread_server.is_alive():
+            sys.exit()
 
     client()
 
