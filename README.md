@@ -1,1 +1,1 @@
-UDP-based communication system where clients and servers can exchange messages or files, acknowledge messages, handle errors, switch roles, and maintain communication using "Keep Alive Requests." The code uses custom made CRC to handle data integrity.
+UDP-based communication system where clients and servers can exchange messages or files, acknowledge messages, handle errors, switch roles, and maintain communication using "Keep Alive Requests." The communication system uses Stop & Waith method for packet acknowledgements and custom-made header of the packets.
